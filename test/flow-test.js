@@ -81,55 +81,69 @@ describe('Flow module', function () {
     describe('Parallel', function () {
         it('should call all functions if there is no error', function () {
             var spy1 = sinon.spy(function (next) {
-                next(null, 'data1');
+                next(null);
             });
-            var spy2 = sinon.spy(function (data, next) {
-                next(null, 'data2');
+            var spy2 = sinon.spy(function (next) {
+                next(null);
             });
-            var spy3 = sinon.spy(function (data, next) {
-                next(null, 'data3');
+            var spy3 = sinon.spy(function (next) {
+                next(null);
             });
-            flow.serial([spy1, spy2, spy3], function (error, data) {});
+            var cb = sinon.spy(function (error, data) {});
+            flow.parallel([spy1, spy2, spy3], cb);
             assert.ok(spy1.calledOnce);
             assert.ok(spy2.calledOnce);
             assert.ok(spy3.calledOnce);
+            assert.ok(cb.calledOnce);
         });
 
         it('should call callback after all functions', function () {
             var spy1 = sinon.spy(function (next) {
-                next(null, 'data1');
+                next(null);
             });
-            var spy2 = sinon.spy(function (data, next) {
-                next(null, 'data2');
+            var spy2 = sinon.spy(function (next) {
+                next(null);
             });
-            var spy3 = sinon.spy(function (data, next) {
-                next(null, 'data3');
+            var spy3 = sinon.spy(function (next) {
+                next(null);
             });
             var spy = sinon.spy(function (error, data) {});
-            flow.serial([spy1, spy2, spy3], spy);
+            flow.parallel([spy1, spy2, spy3], spy);
             assert.ok(spy.calledAfter(spy1));
             assert.ok(spy.calledAfter(spy2));
             assert.ok(spy.calledAfter(spy3));
+            assert.ok(spy.calledOnce);
         });
 
-        it('should call callback with first error if one of function failed', function () {
+        it('should call callback with error if one of functions failed', function () {
             var spy1 = sinon.spy(function (next) {
-                next(null, 'data1');
+                next(null);
             });
-            var spy2 = sinon.spy(function (data, next) {
-                next('error1', 'data2');
-            });
-            var spy3 = sinon.spy(function (data, next) {
-                next('error2', 'data3');
+            var spy2 = sinon.spy(function (next) {
+                next('error');
             });
             var spy = sinon.spy(function (error, data) {});
-            flow.serial([spy1, spy2, spy3], spy);
-            assert.ok(spy.calledWith('error1'));
+            flow.parallel([spy1, spy2], spy);
+            assert.ok(spy.calledWith('error'));
+        });
+
+        it('should call second function if first failed', function () {
+            var spy1 = sinon.spy(function (next) {
+                next('error');
+            });
+            var spy2 = sinon.spy(function (next) {
+                next(null);
+            });
+            var spy = sinon.spy(function (error, data) {});
+            flow.parallel([spy1, spy2], spy);
+            assert.ok(spy.calledWith('error'));
+            assert.ok(spy1.calledOnce);
+            assert.ok(spy2.calledOnce);
         });
 
         it('should call callback with [] if first arg is []', function () {
             var spy = sinon.spy(function (error, data) {});
-            flow.serial([], spy);
+            flow.parallel([], spy);
             assert.ok(spy.calledOnce);
             assert.ok(spy.calledWith(null, []));
         });
@@ -148,7 +162,7 @@ describe('Flow module', function () {
             assert.ok(spy.callCount === 3);
         });
 
-        it('should call callback with first error if one of function failed', function () {
+        it('should return error that was thrown first', function () {
             var spy = sinon.spy(function (value, next) {
                 next(value, value);
             });
